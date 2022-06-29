@@ -1,62 +1,62 @@
-import { Graphics, Stage } from "@inlet/react-pixi";
+import { Stage as PixiStage } from "@inlet/react-pixi";
 import * as React from "react";
+import { ReactReduxContext } from "react-redux";
+import { makeGameMap } from "./gameSlice";
+import { MainScene } from "./scenes/MainScene";
 
-type Draw = Required<React.ComponentProps<typeof Graphics>>["draw"];
-
-const Overlay: React.FC = () => {
-	return <div></div>;
+const ContextBridge: React.FC<{
+	children: React.ReactNode;
+	Context: React.Context<any>;
+	render: (node: React.ReactElement) => React.ReactNode;
+}> = ({ children, Context, render }) => {
+	return (
+		<Context.Consumer>
+			{(value) =>
+				render(
+					<Context.Provider value={value}>
+						{children}
+					</Context.Provider>
+				)
+			}
+		</Context.Consumer>
+	);
 };
 
-const ShipA: React.FC<{
-	color: number;
-	scale: number;
-	rotation: number;
-	x: number;
-	y: number;
-}> = ({ color, scale, x, y, rotation }) => {
-	const draw = React.useCallback<Draw>(
-		(g) => {
-			g.clear();
-			g.beginFill(color);
-			g.moveTo(4, 0); // top point
-			g.lineTo(0, 10); // bottom left
-			g.lineTo(4, 8); // bottom mid point
-			g.lineTo(8, 10); // bottom right
-			g.endFill();
-		},
-		[color]
-	);
+const Stage: React.FC<React.ComponentProps<typeof PixiStage>> = ({
+	children,
+	...props
+}) => {
 	return (
-		<Graphics draw={draw} scale={scale} x={x} y={y} rotation={rotation} />
+		<ContextBridge
+			Context={ReactReduxContext}
+			render={(children) => <PixiStage {...props}>{children}</PixiStage>}
+		>
+			{children}
+		</ContextBridge>
 	);
 };
 
 export const App: React.FC = () => {
-	const [x, setX] = React.useState(0);
-
-	React.useEffect(() => {
-		const pid = setInterval(() => {
-			setX((x) => (x + 20) % 1920);
-		}, 1000 / 60);
-		return () => {
-			clearInterval(pid);
-		};
-	}, []);
 	return (
-		<div>
-			<header className="App-header"></header>
-			<h1 className="text-3xl font-bold underline">Hello World</h1>
-			<Overlay />
-			<Stage width={1920} height={1080}>
-				<ShipA
-					color={0xff0000}
-					scale={2}
-					x={x}
-					y={500}
-					rotation={Math.PI / 6}
-				/>
-			</Stage>
-		</div>
+		<Stage
+			className="w-screen h-screen overflow-hidden"
+			width={window.innerWidth}
+			height={window.innerHeight}
+			options={{
+				antialias: true,
+				resolution: window.devicePixelRatio,
+				autoDensity: true,
+				resizeTo: window,
+			}}
+		>
+			<MainScene
+				map={makeGameMap({
+					width: 2000,
+					height: 2000,
+					players: ["jack", "ai"],
+				})}
+			/>
+		</Stage>
 	);
 };
 
