@@ -1,20 +1,76 @@
 name: 🚀 Deploy
+# jobs:
+#     deploy:
+#         name: Deploy with gh-pages
+#         if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+#         runs-on: ubuntu-latest
+
+#         steps:
+#             - name: Deploy with gh-pages
+#               run: |
+#                   git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+#                   npm run deploy -- -u "github-actions-bot <support+actions@github.com>"
+#               env:
+#                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 on:
     push:
         branches:
             - main
-    pull_request: {}
+    pull_request:
+        branches:
+            - main
 
 jobs:
-    deploy:
-        name: Deploy with gh-pages
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    build:
+        name: Build
         runs-on: ubuntu-latest
 
         steps:
-            - name: Deploy Production
-              run: |
-                  git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
-                  npm run deploy -- -u "github-actions-bot <support+actions@github.com>"
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: 🛑 Cancel Previous Runs
+              uses: styfle/cancel-workflow-action@0.9.1
+
+            - name: ⬇️ Checkout repo
+              uses: actions/checkout@v3
+
+            - name: ⎔ Setup node
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 16
+
+            - name: 📥 Download deps
+              uses: bahmutov/npm-install@v1
+
+            - name: ⚙️ Build
+              run: npm run build
+
+            - name: Run tests
+              run: npm run test
+
+            - name: Upload production-ready build files
+              uses: actions/upload-artifact@v3
+              with:
+                  name: production-files
+                  path: ./build
+
+    deploy:
+        name: Deploy
+        needs: build
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+
+        steps:
+            - name: 🛑 Cancel Previous Runs
+              uses: styfle/cancel-workflow-action@0.9.1
+
+            - name: Download artifact
+              uses: actions/download-artifact@v3
+              with:
+                  name: production-files
+                  path: ./build
+
+            - name: Deploy to gh-pages
+              uses: peaceiris/actions-gh-pages@v3
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_dir: ./build
