@@ -2,7 +2,7 @@
 	"name": "solus-immortal",
 	"version": "0.1.0",
 	"private": true,
-	"homepage": "https://solus-immortal.github.io",
+	"homepage": "https://jlrickert.github.io/solus-immortal",
 	"dependencies": {
 		"@headlessui/react": "^1.6.5",
 		"@heroicons/react": "^1.0.6",
